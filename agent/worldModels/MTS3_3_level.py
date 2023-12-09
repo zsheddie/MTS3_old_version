@@ -414,15 +414,12 @@ class MTS3_3_level(nn.Module):
         state_prior_mean_init, state_prior_cov_init = self._intialize_mean_covar(obs_seqs.shape[0],scale=self.c.mts3.worker.initial_state_covar, learn=False)
 
         for n in range(0, num_district):
-            torch.cuda.empty_cache()
+            #torch.cuda.empty_cache()
             if n == 0:
                 state_prior_mean = state_prior_mean_init
                 state_prior_cov = state_prior_cov_init
             ### create list of state mean and covariance 
-            prior_state_mean_list = []
-            prior_state_cov_list = []
-            post_state_mean_list = []
-            post_state_cov_list = []
+            
 
             #proj_mean = post_proj_means[:, n, :]   ## not necessary?
             #proj_cov = self._unpack_variances(post_proj_covs[:, n, :])
@@ -434,12 +431,14 @@ class MTS3_3_level(nn.Module):
             current_obs_valid_seqs = obs_valid_seqs[:, n*H_super:(n+1)*H_super, :]
             current_district_len = current_obs_seqs.shape[1]
 
-            for w in range(current_district_len):
-                torch.cuda.empty_cache()
-                k = int(w // self.H)
-                print('n=', n, 'w=', w, 'k=', k, 'current_district_len=', current_district_len)
-                print(global_post_task_mean.shape)
-                print(task_means.shape)
+            for k in range(int(current_district_len//self.H)):
+                #torch.cuda.empty_cache()
+                #k = int(w // self.H)
+                prior_state_mean_list = []
+                prior_state_cov_list = []
+                post_state_mean_list = []
+                post_state_cov_list = []
+                
                 task_mean = task_means[:, k, :]
                 task_cov = self._unpack_variances(task_covs[:, k, :])
 
@@ -450,7 +449,8 @@ class MTS3_3_level(nn.Module):
                 current_episode_len = current_obs_seq.shape[1]
 
                 for t in range(current_episode_len): # [x] made sure works with episodes < H
-                    torch.cuda.empty_cache()
+                    print(n,k,t)
+                    #torch.cuda.empty_cache()
                     ### encode the observation (no time embedding)
                     current_obs = current_obs_seq[:, t, :]
 
@@ -479,7 +479,7 @@ class MTS3_3_level(nn.Module):
 
                     ### concat 
                     ### append the state mean and covariance to the list
-                    prior_state_mean_list.append(state_prior_mean)
+                    prior_state_mean_list.append(state_prior_mean)    ##最后格式应该是list中有30个[20,60]的tensor
                     prior_state_cov_list.append(torch.cat(state_prior_cov, dim=-1))
                     post_state_mean_list.append(state_post_mean)
                     post_state_cov_list.append(torch.cat(state_post_cov, dim=-1))
@@ -489,27 +489,31 @@ class MTS3_3_level(nn.Module):
                 state_prior_cov = [cov.detach() for cov in state_prior_cov]
 
                 ### stack the list to get the final tensors   将list堆叠张量
-                prior_state_means = torch.stack(prior_state_mean_list, dim=1)
+                prior_state_means = torch.stack(prior_state_mean_list, dim=1)    ##tensor.size = [2, 150, 60]
                 prior_state_covs = torch.stack(prior_state_cov_list, dim=1)
                 post_state_means = torch.stack(post_state_mean_list, dim=1)
                 post_state_covs = torch.stack(post_state_cov_list, dim=1)
+                print('prior_state_means=',prior_state_means.shape, 'post_state_means=', post_state_means.shape)
 
                 ### append the state mean and covariance to the list
-                global_state_prior_mean_list.append(prior_state_means) 
+                global_state_prior_mean_list.append(prior_state_means)   
                 global_state_prior_cov_list.append(prior_state_covs)
                 global_state_post_mean_list.append(post_state_means)
                 global_state_post_cov_list.append(post_state_covs)
+                print('global_state_prior_mean_list=', len(global_state_prior_mean_list))
 
         ### concat along the episode dimension
         global_state_prior_means = torch.cat(global_state_prior_mean_list, dim=1)
         global_state_prior_covs = torch.cat(global_state_prior_cov_list, dim=1)
         global_state_post_means = torch.cat(global_state_post_mean_list, dim=1)
         global_state_post_covs = torch.cat(global_state_post_cov_list, dim=1)
+        print('global_state_post_means=',global_state_post_means.shape, 'global_state_prior_means=', global_state_prior_means.shape)
 
         ##################################### Decoder ############################################
         ### decode the state to get the observation mean and covariance    要解码成观测还是reward取决于具体任务？
         if self._decode_obs:
             pred_obs_means, pred_obs_covs = self._obsDec(global_state_prior_means, global_state_prior_covs)
+            
         if self._decode_reward:
             pred_reward_means, pred_reward_covs = self._rewardDec(global_state_prior_means, global_state_prior_covs)
 
