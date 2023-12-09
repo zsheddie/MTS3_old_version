@@ -1,0 +1,15 @@
+type: 'medium'
+num_training_sequences: 30000 #from a set of given collected train trajectories create this many sub-trajectories for training
+num_testing_sequences: 10000 #from a set of given collected test trajectories create this many sub-trajectories for testing
+episode_length: 30 #window length for a particular instance of hip-rssm
+num_episodes: 15 #number of hip-rssm instances that make a dp-rssm meta sequence during training / backpropagation
+tar_type: 'next_state' # Use "delta" argument to predict on the differences as targets. In other cases use "observations".
+load: True
+save: False
+standardize: True
+shuffle_split: 0.8
+save_path: "/dataFolder/mts3_datasets_processed/mediumMaze.pkl"
+url: "https://bwsyncandshare.kit.edu/s/SmRYcDj9HnSx97r/download"
+trajPerTask: 10
+downsample: 1
+episodic: False
