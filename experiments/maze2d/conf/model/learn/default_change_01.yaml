@@ -1,4 +1,4 @@
-name: "_maze2d_3level_30epochs_H=9_H3=10"
+name: "_maze2d_3level_30epochs_H=10_H3=9"
 #name: "_default_change_01"
 model:
   load: False
