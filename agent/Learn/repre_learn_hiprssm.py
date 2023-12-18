@@ -125,7 +125,7 @@ class Learn:
 
             # Clip Gradients
             if self.c.learn.clip_gradients:
-                torch.nn.utils.clip_grad_norm_(self._model.parameters(), 5.0)
+                torch.nn.utils.clip_grad_norm(self._model.parameters(), 5.0)
 
             # Backward Pass Via Optimizer
             self._optimizer.step()

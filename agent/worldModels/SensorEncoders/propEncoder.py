@@ -2,7 +2,23 @@ import torch
 from typing import Tuple
 
 nn = torch.nn
+'''
+class Encoder(nn.Module):
+    def __init__(self, input_shape: list, lod: int, config: dict):
+    def _build_hidden_layers(self):
+    def forward(self, obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    
+class EncoderSimple(nn.Module):
+    def __init__(self, input_shape: list, lod: int, config:dict):
+    def _build_hidden_layers(self) -> Tuple[nn.ModuleList, int]:
+    def forward(self, obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    
+class ConvEncoder(nn.Module):
+    def __init__(self, lod: int, output_normalization: str = "post", activation='softplus'):
+    def _build_hidden_layers(self) -> Tuple[nn.ModuleList, int]:
+    def forward(self, obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
 
+'''
 
 def elup1(x: torch.Tensor) -> torch.Tensor:
     return torch.exp(x).where(x < 0.0, x + 1.0)

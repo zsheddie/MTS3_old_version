@@ -19,7 +19,7 @@ nn = torch.nn
 def my_app(cfg)->OmegaConf:
     global config
     model_cfg = cfg
-    exp = HalfCheetahExperiment(model_cfg)
+    exp = Experiment(model_cfg)
 
     train_obs, train_act, train_targets, test_obs, test_act, test_targets, normalizer = exp._get_data_set()
     ### train the model
@@ -29,9 +29,9 @@ def my_app(cfg)->OmegaConf:
     exp._test_world_model(test_obs, test_act, test_targets, normalizer, mts3_model, wandb_run, save_path)
 
 
-class HalfCheetahExperiment(Experiment):
+class Experiment(Experiment):
     def __init__(self, cfg):
-        super(HalfCheetahExperiment, self).__init__(cfg)
+        super(Experiment, self).__init__(cfg)
 
     def _load_save_train_test_data(self):
         """

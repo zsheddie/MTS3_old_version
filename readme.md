@@ -51,11 +51,6 @@ To run a baseline (let's say HiP-RSSM):
 python experiments/mobileRobot/hiprssm_exp.py model=default_hiprssm
 ```
 
-To run the parallelized version of MTS3 (MTS3-Parallel) on mobile robot dataset:
-```
-python experiments/mobileRobot/mts3_exp.py model=default_mts3_parallel
-```
-
 Similar commands can be used for other datasets like frankaKitchen, maze2d, halfCheetah etc. 
 
 ### Hydra 

@@ -3,7 +3,18 @@ import numpy as np
 from typing import Iterable, Tuple, List
 
 nn = torch.nn
-
+'''
+main structure gaussian conditioning:
+class Update(nn.Module):
+    def __init__(self, latent_obs_dim: int, memory: bool = True, config=None, dtype: torch.dtype = torch.float32):
+    def forward(self, prior_mean: torch.Tensor, prior_cov: Iterable[torch.Tensor], obs: torch.Tensor,
+                obs_var: torch.Tensor, obs_valid: torch.Tensor = None) -> Tuple[torch.Tensor, Iterable[torch.Tensor], torch.Tensor, Iterable[torch.Tensor]]:
+    def _invert(self, S=Iterable[torch.Tensor]):  covariance matrix 和 precision matrix 的转换
+    def _masked_update(self, prior_mean: torch.Tensor, prior_cov: Iterable[torch.Tensor],
+                       obs_mean: torch.Tensor, obs_var: torch.Tensor, obs_valid: torch.Tensor) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        
+    
+'''
 
 class Update(nn.Module):
     """
@@ -88,12 +99,16 @@ class Update(nn.Module):
             if obs_mean.shape[1] == 1:
                 # single observation
                 # use the factorized kalman update equations in RKN paper
+                #print("Single observation", obs_mean.shape)
 
                 # squeeze the second dimension
                 obs_mean = obs_mean.squeeze(1)
                 obs_var = obs_var.squeeze(1)
 
+                #print("obs_mean", obs_mean.shape)
+
                 ## Unpack prior covariance
+
                 cov_u, cov_l, cov_s = prior_cov
 
                 # compute kalman gain (eq 2 and 3 in paper)

@@ -40,14 +40,15 @@ class MobileExperiment(Experiment):
         :return: train_obs, train_act, train_targets, test_obs, test_act, test_targets, normalizer
         """
         ## load the data from pickle and if not present download from the url
-        if not os.path.exists(get_original_cwd() + self._data_cfg.save_path):
+        if not os.path.exists(get_original_cwd() + self._data_train_cfg.save_path):
             print("..........Data Not Found...........Downloading from URL")
             ### download the data from url
             from urllib.request import urlretrieve
-            urlretrieve(self._data_cfg.url, get_original_cwd() + self._data_cfg.save_path)
+            urlretrieve(self._data_train_cfg.url, get_original_cwd() + self._data_train_cfg.save_path)
+            urlretrieve(self._data_test_cfg.url, get_original_cwd() + self._data_test_cfg.save_path)
         else:
             print("..........Data Found...........Loading from local")
-        with open(get_original_cwd() + self._data_cfg.save_path, 'rb') as f:
+        with open(get_original_cwd() + self._data_train_cfg.save_path, 'rb') as f:
             data_dict = pickle.load(f)
             print("Train Obs Shape", data_dict['train_obs'].shape)
             print("Train Act Shape", data_dict['train_act'].shape)

@@ -1,19 +1,19 @@
 defaults:
-  - learn: default
-  - data: data_complete
+  - learn: default_change_01
+  - data: data_medium
 
 wandb:
   log: True
-  project_name: 'cameraFrankaKitchen'
+  project_name: 'debugMaze'
   exp_name: 'mts3_new'
   sweep: False
   sweep_id: null
 
 mts3:
-  parallel_encoding: True
-  latent_obs_dim: 30 #for contextual rssm
+  latent_obs_dim: 10 #for contextual rssm
   pixel_obs: False
-  time_scale_multiplier: 15
+  time_scale_multiplier: 30
+  time_scale_multiplier_3: 5
   initial_state_covar: 10 ## for both hierarchies same (chaneg later ??)
   manager:
     bandwidth: 3
@@ -21,6 +21,7 @@ mts3:
     trans_net_hidden_activation: "Tanh"
     process_noise_hidden_activation: 'ReLU'
     learn_trans_covar: True
+    multi_gaussian_l_transform: False
     trans_covar: 0.1
     learn_initial_state_covar: False
     initial_state_covar: 10
@@ -50,13 +51,13 @@ mts3:
     bandwidth: 3
     decode_var: True
     obs_encoder:
-      hidden_units_list: [ 120 ]
+      hidden_units_list: [ 60 ]
       out_norm: 'none'
       variance_activation: 'softplus'
     trans_net_hidden_units: [ ]
-    control_net_hidden_units: [ 120 ]
-    task_net_hidden_units: [ 120 ]
-    process_noise_hidden_units: [ 30 ]
+    control_net_hidden_units: [ 30 ]
+    task_net_hidden_units: [ 30 ]
+    process_noise_hidden_units: [ 20 ]
     trans_net_hidden_activation: "Tanh"
     control_net_hidden_activation: 'ReLU'
     process_noise_hidden_activation: 'ReLU'
@@ -66,7 +67,7 @@ mts3:
     learn_initial_state_covar: False
     initial_state_covar: 10
     obs_decoder:
-      hidden_units_list: [ 240 ]
+      hidden_units_list: [ 60 ]
       variance_activation: 'softplus'
 
   decode:

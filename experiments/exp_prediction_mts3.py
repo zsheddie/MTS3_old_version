@@ -1,6 +1,7 @@
 ##TODO: avoid convert to tensor here
 import sys
 sys.path.append('.')
+sys.path.append('E:\\KIT\\毕设\\世界模型\\MTS3代码注释随意修改\\MTS3_release-master\\MTS3_release-master')
 from omegaconf import DictConfig, OmegaConf
 import hydra
 import os

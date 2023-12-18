@@ -44,7 +44,6 @@ class MTS3(nn.Module):
         self._pixel_obs = self.c.mts3.pixel_obs
         self._decode_reward = self.c.mts3.decode.reward
         self._decode_obs = self.c.mts3.decode.obs
-        self._parallel_encoding = self.c.mts3.parallel_encoding
 
 
 
@@ -144,24 +143,6 @@ class MTS3(nn.Module):
         task_prior_mean_init, task_prior_cov_init = self._intialize_mean_covar(obs_seqs.shape[0], scale=self.c.mts3.manager.initial_state_covar, learn=False)
         skill_prior_mean, skill_prior_cov = self._intialize_mean_covar(obs_seqs.shape[0], diagonal=True,  learn=False)
 
-        if self._parallel_encoding:
-            time_embedding = self._create_time_embedding(obs_seqs.shape[0], self.H)
-            ### repeat the time embedding for the number of episodes
-            time_embedding_parallel = time_embedding.repeat(1, int(obs_seqs.shape[1] // self.H) + 1, 1)
-            time_embedding_parallel = time_embedding_parallel[:, :obs_seqs.shape[1],
-                                        :]  ## trim the time embedding to the length of the sequence
-            # [x] made sure works with episodes < H
-            beta_k_mean_parallel, beta_k_var_prallel = self._absObsEnc(
-                    torch.cat([obs_seqs, time_embedding_parallel], dim=-1))
-
-            # [x] made sure works with episodes < H
-            alpha_k_mean_parallel, alpha_k_var_parallel = self._absActEnc(
-                    torch.cat([action_seqs, time_embedding_parallel], dim=-1))
-            
-            #### Parallel Encoding Of Worker Encoder
-            obs_mean_parallel, obs_var_parallel = self._obsEnc(obs_seqs)
-            
-
         ### loop over individual episodes in steps of H (Coarse time scale / manager)
         for k in range(0, obs_seqs.shape[1], self.H):
             episode_num = int(k // self.H)
@@ -169,14 +150,10 @@ class MTS3(nn.Module):
                 task_prior_mean = task_prior_mean_init
                 task_prior_cov = task_prior_cov_init
             ### encode the observation set with time embedding to get abstract observation
-            if not self._parallel_encoding:
-                current_obs_seqs = obs_seqs[:, k:k+self.H, :]
-                time_embedding = self._create_time_embedding(current_obs_seqs.shape[0], current_obs_seqs.shape[1])
-                                                                            # [x] made sure works with episodes < H
-                beta_k_mean, beta_k_var = self._absObsEnc(torch.cat([current_obs_seqs, time_embedding], dim=-1))
-            else:
-                beta_k_mean = beta_k_mean_parallel[:, k:k+self.H, :]
-                beta_k_var = beta_k_var_prallel[:, k:k+self.H, :]
+            current_obs_seqs = obs_seqs[:, k:k+self.H, :]
+            time_embedding = self._create_time_embedding(current_obs_seqs.shape[0], current_obs_seqs.shape[1]) 
+                                                                        # [x] made sure works with episodes < H
+            beta_k_mean, beta_k_var = self._absObsEnc(torch.cat([current_obs_seqs, time_embedding], dim=-1))
 
             ### get task valid for the current episode
             obs_valid = obs_valid_seqs[:, k:k+self.H, :] 
@@ -185,33 +162,29 @@ class MTS3(nn.Module):
             task_post_mean, task_post_cov = self._taskUpdate(task_prior_mean, task_prior_cov, beta_k_mean, beta_k_var, obs_valid)
             
             ### infer the abstract action with bayesian aggregation
-            if not self._parallel_encoding:
-                current_act_seqs = action_seqs[:, k+self.H: k+2*self.H, :]
-                if current_act_seqs.shape[1] != 0:
-                    ## skip prior calculation for the next window if there is no action in the current window
-                    alpha_k_mean, alpha_k_var = self._absActEnc(torch.cat([current_act_seqs, time_embedding], dim=-1)) \
-                                                ## encode the action set with time embedding
-            else:
-                alpha_k_mean = alpha_k_mean_parallel[:, k + self.H: k + 2 * self.H, :]
-                alpha_k_var  = alpha_k_var_parallel[:, k + self.H: k + 2 * self.H, :]
+            current_act_seqs = action_seqs[:, k+self.H: k+2*self.H, :]
+            if current_act_seqs.shape[1] != 0:
+                ## skip prior calculation for the next window if there is no action in the current window
+                ##print(current_act_seqs.shape, time_embedding.shape)
+                alpha_k_mean, alpha_k_var = self._absActEnc(torch.cat([current_act_seqs, time_embedding], dim=-1)) \
+                                            ## encode the action set with time embedding
+                abs_act_mean, abs_act_var = self._action_Infer(skill_prior_mean, skill_prior_cov, alpha_k_mean, \
+                                                                alpha_k_var, None) ##BA with all actions valid
+
+
+                ### predict the next task mean and covariance using manager marginalization layer
+                ### with the current task posterior and abstract action as causal factors
+                mean_list_causal_factors = [task_post_mean, abs_act_mean]
+                cov_list_causal_factors = [task_post_cov, abs_act_var]
+                task_next_mean, task_next_cov = self._task_predict(mean_list_causal_factors, cov_list_causal_factors) #[.]: absact inference some problem fixed.
+
+                ### update the task prior
+                task_prior_mean, task_prior_cov = task_next_mean, task_next_cov
                 
-            abs_act_mean, abs_act_var = self._action_Infer(skill_prior_mean, skill_prior_cov, alpha_k_mean, \
-                                                            alpha_k_var, None)  ##BA with all actions valid
-
-
-            ### predict the next task mean and covariance using manager marginalization layer
-            ### with the current task posterior and abstract action as causal factors
-            mean_list_causal_factors = [task_post_mean, abs_act_mean]
-            cov_list_causal_factors = [task_post_cov, abs_act_var]
-            task_next_mean, task_next_cov = self._task_predict(mean_list_causal_factors, cov_list_causal_factors) #[.]: absact inference some problem fixed.
-
-            ### update the task prior
-            task_prior_mean, task_prior_cov = task_next_mean, task_next_cov
-
-            ### append the task mean and covariance to the list
-            prior_task_mean_list.append(task_prior_mean)
-            prior_task_cov_list.append(self._pack_variances(task_prior_cov)) ## append the packed covariances
-            abs_act_list.append(abs_act_mean)
+                ### append the task mean and covariance to the list
+                prior_task_mean_list.append(task_prior_mean)
+                prior_task_cov_list.append(self._pack_variances(task_prior_cov)) ## append the packed covariances
+                abs_act_list.append(abs_act_mean)
 
             post_task_mean_list.append(task_post_mean)
             post_task_cov_list.append(self._pack_variances(task_post_cov)) ## append the packed covariances
@@ -241,7 +214,7 @@ class MTS3(nn.Module):
         state_prior_mean_init, state_prior_cov_init = self._intialize_mean_covar(obs_seqs.shape[0],scale=self.c.mts3.worker.initial_state_covar, learn=False)
 
         for k in range(0,num_episodes): ## first episode is considered too to predict (but usually ignored in evaluation)
-            #print("Episode: ", k)
+            print("Episode: ", k)
             if k==0:
                 state_prior_mean = state_prior_mean_init
                 state_prior_cov = state_prior_cov_init
@@ -263,13 +236,9 @@ class MTS3(nn.Module):
 
             for t in range(current_episode_len): # [x] made sure works with episodes < H
                 ### encode the observation (no time embedding)
-                if not self._parallel_encoding:
-                    current_obs = current_obs_seqs[:, t, :]
-    
-                    obs_mean, obs_var = self._obsEnc(current_obs)
-                else:
-                    obs_mean = obs_mean_parallel[:, t, :]
-                    obs_var = obs_var_parallel[:, t, :]
+                current_obs = current_obs_seqs[:, t, :]
+
+                obs_mean, obs_var = self._obsEnc(current_obs)
                 ## expand dims to make it compatible with the update step (which expects a 3D tensor)
                 obs_mean = torch.unsqueeze(obs_mean, dim=1)
                 obs_var = torch.unsqueeze(obs_var, dim=1)

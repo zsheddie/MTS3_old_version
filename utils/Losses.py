@@ -15,6 +15,7 @@ def gaussian_nll(target, predicted_mean, predicted_var):
     """Gaussian Negative Log Likelihood (assuming diagonal covariance)"""
     #target = target[:,:1]
     predicted_var += 1e-12
+    
     mahal = (target - predicted_mean)**2 / predicted_var
     element_wise_nll = 0.5 * (torch.log(predicted_var) + np.log(2 * np.pi) + mahal)
     sample_wise_error = torch.sum(element_wise_nll, dim=-1)

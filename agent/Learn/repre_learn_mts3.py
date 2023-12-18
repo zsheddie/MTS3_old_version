@@ -15,6 +15,7 @@ import wandb
 from hydra.utils import get_original_cwd, to_absolute_path
 
 from agent.worldModels.MTS3 import MTS3
+#from agent.worldModels.MTS3 import MTS3_3_level
 from utils.Losses import mse, gaussian_nll
 from utils.PositionEmbedding import PositionEmbedding as pe
 from utils.plotTrajectory import plotImputation
@@ -134,7 +135,7 @@ class Learn:
 
             # Clip Gradients
             if self.c.learn.clip_gradients:
-                torch.nn.utils.clip_grad_norm_(self._model.parameters(), 5.0)
+                torch.nn.utils.clip_grad_norm(self._model.parameters(), 5.0)
 
             # Backward Pass Via Optimizer
             self._optimizer.step()

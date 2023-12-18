@@ -182,11 +182,11 @@ class Experiment():
 
         num_steps = test_obs.shape[1] - 2 * self._data_cfg.episode_length
         pred_mean, pred_var, gt, obs_valid, cur_obs = acrkn_infer.predict_multistep(test_obs,
-                                                                                                test_act,
-                                                                                                test_targets,
-                                                                                                multistep=num_steps,
-                                                                                                batch_size=1000,
-                                                                                                tar=self._data_cfg.tar_type)
+                                                                                                  test_act,
+                                                                                                  test_targets,
+                                                                                                  multistep=num_steps,
+                                                                                                  batch_size=1000,
+                                                                                                  tar=self._data_cfg.tar_type)
 
         ### Denormalize the predictions and ground truth
         pred_mean_denorm = denorm(pred_mean, normalizer, tar_type=self._data_cfg.tar_type);

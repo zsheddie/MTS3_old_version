@@ -188,7 +188,7 @@ class MTS3_3_level(nn.Module):
             
             if current_act_seqs.shape[1] != 0:             ## 如果序列长度不为0
                 ## skip prior calculation for the next window if there is no action in the current window    ## 若当前时间窗口没有动作则跳过下一时间窗口的先验计算（因为没有任何动作，所以先验不会被更新）
-                print(current_act_seqs.shape, time_embedding.shape)
+                
                 alpha_n_mean, alpha_n_var = self._absActEnc(torch.cat([current_act_seqs, time_embedding], dim=-1)) \
                                             ## encode the action set with time embedding
                 abs_act_mean, abs_act_var = self._action_Infer(main_skill_prior_mean, main_skill_prior_cov, alpha_n_mean, \
@@ -213,8 +213,7 @@ class MTS3_3_level(nn.Module):
             post_proj_mean_list.append(proj_post_mean)
             post_proj_cov_list.append(self._pack_variances(proj_post_cov)) ## append the packed covariances
 
-            
-        print(len(prior_proj_mean_list))
+
         ### stack the list to get the final tensors  堆叠列表以获得最终张量
         prior_proj_means = torch.stack(prior_proj_mean_list, dim=1)    ## stack是生成新维度的拼接，但生成的新维度是第二个维度dim=1，而不是最后一个维度
         prior_proj_covs = torch.stack(prior_proj_cov_list, dim=1)
@@ -283,9 +282,9 @@ class MTS3_3_level(nn.Module):
                     ### with the current task posterior and abstract action as causal factors                ## 用高斯marginalization更新先验（通过当前后验和抽象动作集合）
                     mean_list_causal_factors = [task_post_mean, abs_act_mean, proj_mean]
                     cov_list_causal_factors = [task_post_cov, abs_act_var, proj_cov]
-                    print('&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&')
-                    print(task_post_mean.shape, abs_act_mean.shape, proj_mean.shape)
-                    print(task_post_cov[0].shape, task_post_cov[1].shape, task_post_cov[2].shape, abs_act_var[0].shape, abs_act_var[1].shape, abs_act_var[2].shape)
+                    #print('&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&')
+                    #print(task_post_mean.shape, abs_act_mean.shape, proj_mean.shape)
+                    #print(task_post_cov[0].shape, task_post_cov[1].shape, task_post_cov[2].shape, abs_act_var[0].shape, abs_act_var[1].shape, abs_act_var[2].shape)
                     task_next_mean, task_next_cov = self._task_predict(mean_list_causal_factors, cov_list_causal_factors) #[.]: absact inference some problem fixed.
 
                     ### update the task prior
@@ -298,7 +297,6 @@ class MTS3_3_level(nn.Module):
 
                 post_task_mean_list.append(task_post_mean)
                 post_task_cov_list.append(self._pack_variances(task_post_cov)) ## append the packed covariances
-                print(k, len(post_task_mean_list))
 
             ### stack the list to get the final tensors  堆叠列表以获得最终张量
             prior_task_means = torch.stack(prior_task_mean_list, dim=1)
@@ -311,13 +309,11 @@ class MTS3_3_level(nn.Module):
             global_prior_task_cov_list.append(prior_task_covs)  
             global_post_task_mean_list.append(post_task_means)
             global_post_task_cov_list.append(post_task_covs)
-            print(len(global_post_task_mean_list))
 
         global_prior_task_mean = torch.cat(global_prior_task_mean_list, dim = 1)
         global_prior_task_cov = torch.cat(global_prior_task_cov_list, dim = 1)
         global_post_task_mean = torch.cat(global_post_task_mean_list, dim = 1)
         global_post_task_cov = torch.cat(global_post_task_cov_list, dim = 1)
-        print(global_post_task_mean.shape)
         
 
         '''
@@ -414,6 +410,7 @@ class MTS3_3_level(nn.Module):
         state_prior_mean_init, state_prior_cov_init = self._intialize_mean_covar(obs_seqs.shape[0],scale=self.c.mts3.worker.initial_state_covar, learn=False)
 
         for n in range(0, num_district):
+            print(n, "just to let u know I'm still running...")
             #torch.cuda.empty_cache()
             if n == 0:
                 state_prior_mean = state_prior_mean_init
@@ -438,7 +435,7 @@ class MTS3_3_level(nn.Module):
                 prior_state_cov_list = []
                 post_state_mean_list = []
                 post_state_cov_list = []
-                
+
                 task_mean = task_means[:, k, :]
                 task_cov = self._unpack_variances(task_covs[:, k, :])
 
@@ -449,7 +446,7 @@ class MTS3_3_level(nn.Module):
                 current_episode_len = current_obs_seq.shape[1]
 
                 for t in range(current_episode_len): # [x] made sure works with episodes < H
-                    print(n,k,t)
+                    #print(n,k,t)
                     #torch.cuda.empty_cache()
                     ### encode the observation (no time embedding)
                     current_obs = current_obs_seq[:, t, :]
@@ -493,21 +490,18 @@ class MTS3_3_level(nn.Module):
                 prior_state_covs = torch.stack(prior_state_cov_list, dim=1)
                 post_state_means = torch.stack(post_state_mean_list, dim=1)
                 post_state_covs = torch.stack(post_state_cov_list, dim=1)
-                print('prior_state_means=',prior_state_means.shape, 'post_state_means=', post_state_means.shape)
 
                 ### append the state mean and covariance to the list
                 global_state_prior_mean_list.append(prior_state_means)   
                 global_state_prior_cov_list.append(prior_state_covs)
                 global_state_post_mean_list.append(post_state_means)
                 global_state_post_cov_list.append(post_state_covs)
-                print('global_state_prior_mean_list=', len(global_state_prior_mean_list))
 
         ### concat along the episode dimension
         global_state_prior_means = torch.cat(global_state_prior_mean_list, dim=1)
         global_state_prior_covs = torch.cat(global_state_prior_cov_list, dim=1)
         global_state_post_means = torch.cat(global_state_post_mean_list, dim=1)
         global_state_post_covs = torch.cat(global_state_post_cov_list, dim=1)
-        print('global_state_post_means=',global_state_post_means.shape, 'global_state_prior_means=', global_state_prior_means.shape)
 
         ##################################### Decoder ############################################
         ### decode the state to get the observation mean and covariance    要解码成观测还是reward取决于具体任务？
@@ -516,7 +510,6 @@ class MTS3_3_level(nn.Module):
             
         if self._decode_reward:
             pred_reward_means, pred_reward_covs = self._rewardDec(global_state_prior_means, global_state_prior_covs)
-
             
         return pred_obs_means, pred_obs_covs, prior_task_means.detach(), prior_task_covs.detach(), post_task_means.detach(), post_task_covs.detach(), abs_acts.detach()
 

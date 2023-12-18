@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from utils.TimeDistributed import TimeDistributed
 from agent.worldModels.SensorEncoders.propEncoder import EncoderSimple
 from agent.worldModels.Decoders.propDecoder import SimpleDecoder
 from typing import Tuple

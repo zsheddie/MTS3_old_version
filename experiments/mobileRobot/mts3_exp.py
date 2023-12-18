@@ -1,6 +1,5 @@
 import sys
 sys.path.append('.')
-sys.path.append('E:\\KIT\\Masterarbeit\\world_model\\MTS3_release-master\\MTS3_release-master')
 from omegaconf import DictConfig, OmegaConf
 import hydra
 import os
